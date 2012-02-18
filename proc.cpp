@@ -1,6 +1,6 @@
 // Routine for the thread:
 
-void *proc (void *thread_arg ) {
+void *Proc (void *thread_arg ) {
 //	struct thread_data *my_data = thread_arg;
 	float **A = thread_arg->input;
 	int no_threads = thread_arg->nthread;
@@ -10,11 +10,11 @@ void *proc (void *thread_arg ) {
 	for( int k = 0; k <no_rows - 1; k++)  {
 		  
 		//No. of rows handled by each thread:
-		int my_no_rows = ( (no_rows - k - 1)/ no_threads)	
+		int my_no_rows = ( (no_rows - k - 1)/ no_threads);
 
 		// local variables:
 		int start = 1 + thread_id*my_no_rows;
-	 	if( start > n ) 
+	 	if( start > no_rows ) 
 			pthread_exit(0);
 		
 		int end = start + my_no_rows - 1;
@@ -29,9 +29,15 @@ void *proc (void *thread_arg ) {
 			}
 		}
 
-		// Barrier 
-		barrier
+		// Barrier Synchronization point
+		int rc = pthread_barrier_wait(&barr);
+		if(rc != 0 && rc != PTHREAD_BARRIER_SERIAL_THREAD)
+		{
+			printf("Could not wait on barrier\n");
+			exit(-1);
+		}
 
+		
 } // end for k;
 
 } // end for proc;
