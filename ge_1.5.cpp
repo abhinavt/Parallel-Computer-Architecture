@@ -1,21 +1,22 @@
 // Final working code; with file IO
-// correct version of parallel code without '0' pivot 
+// working with multiple threads; modification of ge_1.3.cpp which was inherently sequential
 #define _XOPEN_SOURCE 600
 #include <iostream>
 #include <fstream>
 #include<pthread.h>
-#define NUM_THREAD 2
+#define NUM_THREAD 4
 
 using namespace std;
 
-int n; // n = number of rows
+	int n; // n = number of rows
 
-struct thread_data{
-float** data;
-int pid;
-};
+	struct thread_data{
+	float** data;
+	int pid;
+	};
 
-pthread_barrier_t barr;
+	pthread_barrier_t barr;
+//	pthread_barrier_t barr2
 
 void* solve(void *thread_arg) { // needed: pid, data, number of rows
 	struct thread_data* my_data;
@@ -23,43 +24,50 @@ void* solve(void *thread_arg) { // needed: pid, data, number of rows
 	float** a;
 	a = my_data->data;
 	int id = my_data->pid;
+	int p[NUM_THREAD];
+//	cout << "thread id is : : " << id << "  n is : " << n << endl;
 
-	cout << "thread id is : : " << id << "  n is : " << n << endl;
-
-	int i, j, k, max;
+	int i, j, k, max, mystart;
 	float t;
 
 	for (i = 0; i < n; ++i) {
-	//	if ((i+1)%NUM_THREAD == id){
-	//		cout << "thread : " << id << " working" << endl;
-				for (j = n; j >= i; --j){
-					for (k = i + id + 1; k < n; k=(k+id+1)){ 
-						if (k%NUM_THREAD == id)			// i = PIVOT
-						cout << "thread : " << id << " working" << endl;							
-							a[k][j] -= a[k][i]/a[i][i] * a[i][j];
-					}
-				}
+
+//----------------------------------------------------------------------------------------------------------------------
+		for (int r = i+1; r <n+NUM_THREAD; r++){
+			if (r%NUM_THREAD == id){
+				mystart = r;
+				cout << "mystart : " << mystart << " thread : " << id << " pivot : " << i << endl;
+				break;	
+			}
+			else
+				continue;		
+		}		
+//----------------------------------------------------------------------------------------------------------------------
+	for (k = mystart; k < n; k=k+NUM_THREAD){
+		for (j = n; j >= i; --j){
+//			for (k = mystart; k < n; k=k+NUM_THREAD){ 						
+						a[k][j] -= a[k][i]/a[i][i] * a[i][j];
+			}
+		}
+	cout << "waiting for barrier " << id << endl;
 	pthread_barrier_wait(&barr);
 	}
 }
 
-
-
 int main(int argc, char *argv[]) {
 
+	struct thread_data in[NUM_THREAD];
+	pthread_t threads[NUM_THREAD];
+	pthread_barrier_init(&barr, NULL, NUM_THREAD);
 
-struct thread_data in[NUM_THREAD];
-pthread_t threads[NUM_THREAD];
-pthread_barrier_init(&barr, NULL, NUM_THREAD);
-
-ifstream is ("example.txt");
+	ifstream is ("example.txt");
         int input;
         int data;
         int i=0;
-float** ptr;
+	float** ptr;
 
         is >> input;
-       n = input;
+        n = input;
         int row = input;
         int col = input+1;
 
@@ -68,46 +76,46 @@ float** ptr;
         for(int i = 0; i < row; i++){
    
                 ptr[i] = new float[col];
-}
+	}
 
         for (int a=0; a<row; a++){
             for (int b=0; b<col; b++){
-is >> data;
-ptr[a][b] = data;
-// cout << "ptr [" << a << "][" << b << "]" << ptr[a][b] << endl;
+		is >> data;
+		ptr[a][b] = data;
+		// cout << "ptr [" << a << "][" << b << "]" << ptr[a][b] << endl;
            }
-}
+	}
 
-for (int i=0; i<NUM_THREAD; i++){
-in[i].data = ptr;
-}
+	for (int i=0; i<NUM_THREAD; i++){
+		in[i].data = ptr;
+	}
 
 
-for(int t=0; t<NUM_THREAD; t++){
-        in[t].pid = t;
-	cout <<"In main: creating thread : " << t << endl;
-	pthread_create(&threads[t], NULL, solve, (void *) &in[t]);
-  }
+	for(int t=0; t<NUM_THREAD; t++){
+   	     	in[t].pid = t;
+		cout <<"In main: creating thread : " << t << endl;
+		pthread_create(&threads[t], NULL, solve, (void *) &in[t]);
+ 	}
 
 // solve(ptr, n);
 
 
-for(int i = 0; i < NUM_THREAD; ++i)
-{
-         pthread_join(threads[i], NULL);
-}
+	for(int i = 0; i < NUM_THREAD; ++i)
+	{
+      	   	pthread_join(threads[i], NULL);
+	}
 
-for (int k = 0; k < n; ++k) {
-for (int j = 0; j < n + 1; ++j)
-cout << ptr[k][j] << '\t';
-cout << '\n';
-// cout << a[k][j]/a[k][k] << '\t'; // for normalization
-// cout << '\n';
-}
+	for (int k = 0; k < n; ++k) {
+		for (int j = 0; j < n + 1; ++j)
+			cout << ptr[k][j] << '\t';
+			cout << '\n';
+	// cout << a[k][j]/a[k][k] << '\t'; // for normalization
+	// cout << '\n';
+	}
 
 
-delete [] ptr;
-return(0);
+	delete [] ptr;
+	return(0);
 }
 
 
